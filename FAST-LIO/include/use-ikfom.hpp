@@ -36,7 +36,7 @@ MTK::get_cov<process_noise_ikfom>::type process_noise_cov()
 
 // double L_offset_to_I[3] = {0.04165, 0.02326, -0.0284}; // Avia
 // vect3 Lidar_offset_to_IMU(L_offset_to_I, 3);
-// fast_lio2论文公式(2), 起始这里的f就是将imu的积分方程组成矩阵形式然后再去计算
+// fast_lio2论文公式(2), 起始这里的f就是将imu的积分方程组成矩阵形式然后再去计算，然而没有考虑测量噪声进去？f函数里没有考虑噪声进去
 Eigen::Matrix<double, 24, 1> get_f(state_ikfom &s, const input_ikfom &in)
 {
 	Eigen::Matrix<double, 24, 1> res = Eigen::Matrix<double, 24, 1>::Zero(); // 将imu积分方程矩阵初始化为0,这里的24个对应了速度(3)，角速度(3),外参偏置T(3),外参偏置R(3)，加速度(3),角速度偏置(3),加速度偏置(3),位置(3)，与论文公式不一致
@@ -52,7 +52,7 @@ Eigen::Matrix<double, 24, 1> get_f(state_ikfom &s, const input_ikfom &in)
 	}
 	return res;
 }
-// 对应fast_lio2论文公式(7)
+// 对应fast_lio2论文公式(7)，对残差状态的雅克比
 Eigen::Matrix<double, 24, 23> df_dx(state_ikfom &s, const input_ikfom &in)
 {
 	//当中的23个对应了status的维度计算，为pos(3), rot(3),offset_R_L_I(3),offset_T_L_I(3), vel(3), bg(3), ba(3), grav(2);这一块和fast-lio不同需要注意

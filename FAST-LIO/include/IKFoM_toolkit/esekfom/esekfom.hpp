@@ -114,7 +114,7 @@ namespace esekfom
 		};
 
 	public:
-		typedef typename state::scalar scalar_type;
+		typedef typename state::scalar scalar_type; //获取变量类型(int, double,float)
 		typedef Matrix<scalar_type, n, n> cov;
 		typedef Matrix<scalar_type, m, n> cov_;
 		typedef SparseMatrix<scalar_type> spMt;
@@ -2156,6 +2156,7 @@ namespace esekfom
 		cov F_x2 = cov::Identity();
 		cov L_ = cov::Identity();
 
+		//声明函数指针
 		processModel *f;
 		processMatrix1 *f_x;
 		processMatrix2 *f_w;

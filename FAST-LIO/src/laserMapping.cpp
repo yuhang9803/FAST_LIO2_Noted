@@ -866,11 +866,7 @@ int main(int argc, char **argv)
      */
     int effect_feat_num = 0, frame_num = 0;
     double deltaT, deltaR, aver_time_consu = 0, aver_time_icp = 0, aver_time_match = 0, aver_time_incre = 0, aver_time_solve = 0, aver_time_const_H_time = 0;
-    bool flg_EKF_converged, EKF_stop_flg = 0;
 
-    //这里没用到
-    FOV_DEG = (fov_deg + 10.0) > 179.9 ? 179.9 : (fov_deg + 10.0);
-    HALF_FOV_COS = cos((FOV_DEG)*0.5 * PI_M / 180.0);
 
     _featsArray.reset(new PointCloudXYZI());
     // 将数组point_selected_surf内元素的值全部设为true，数组point_selected_surf用于选择平面点
@@ -881,10 +877,6 @@ int main(int argc, char **argv)
     downSizeFilterSurf.setLeafSize(filter_size_surf_min, filter_size_surf_min, filter_size_surf_min);
     // VoxelGrid滤波器参数，即进行滤波时的创建的体素边长为filter_size_map_min
     downSizeFilterMap.setLeafSize(filter_size_map_min, filter_size_map_min, filter_size_map_min);
-
-    // 重复操作 没有必要
-    memset(point_selected_surf, true, sizeof(point_selected_surf));
-    memset(res_last, -1000.0f, sizeof(res_last));
 
     // 从雷达到IMU的外参R和T
     Lidar_T_wrt_IMU << VEC_FROM_ARRAY(extrinT); // 相对IMU的外参
