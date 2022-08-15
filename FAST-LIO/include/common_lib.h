@@ -51,7 +51,7 @@ M3F Eye3f(M3F::Identity());
 V3D Zero3d(0, 0, 0);
 V3F Zero3f(0, 0, 0);
 
-struct MeasureGroup // Lidar data and imu dates for the curent process
+struct MeasureGroup // Lidar data and imu dates for the current process
 {
     MeasureGroup()
     {

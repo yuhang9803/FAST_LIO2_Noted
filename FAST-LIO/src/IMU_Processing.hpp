@@ -230,10 +230,10 @@ void ImuProcess::UndistortPcl(const MeasureGroup &meas, esekfom::esekf<state_ikf
   v_imu.push_front(last_imu_);                                      //将上一帧最后尾部的imu添加到当前帧头部的imu
   const double &imu_beg_time = v_imu.front()->header.stamp.toSec(); //拿到当前帧头部的imu的时间（也就是上一帧尾部的imu时间戳）
   const double &imu_end_time = v_imu.back()->header.stamp.toSec();  //拿到当前帧尾部的imu的时间
-  const double &pcl_beg_time = meas.lidar_beg_time;                 // pcl开始的时间戳
+  const double &pcl_beg_time = meas.lidar_beg_time;                 // 激光雷达pcl开始的时间戳
 
   /*** sort point clouds by offset time ***/
-  // 根据点云中每个点的时间戳对点云进行重排序
+  // 根据点云中每个点的时间戳对点云进行从小到大重排序
   pcl_out = *(meas.lidar);
   sort(pcl_out.points.begin(), pcl_out.points.end(), time_list);
   const double &pcl_end_time = pcl_beg_time + pcl_out.points.back().curvature / double(1000); //拿到最后一帧时间戳加上最后一帧的所需要的时间/1000得到点云的结束时间戳
@@ -256,12 +256,12 @@ void ImuProcess::UndistortPcl(const MeasureGroup &meas, esekfom::esekf<state_ikf
 
   input_ikfom in; // eksf 传入的参数
 
-  // 遍历本次估计的所有IMU测量并且进行积分，离散中值法 前向传播
+  // 遍历本次估计的所有IMU测量并且进行积分，使用离散中值法 前向传播
   for (auto it_imu = v_imu.begin(); it_imu < (v_imu.end() - 1); it_imu++)
   {
     auto &&head = *(it_imu);     //拿到当前帧的imu数据
     auto &&tail = *(it_imu + 1); //拿到下一帧的imu数据
-    //判断时间先后顺序 不符合直接continue
+    //判断时间先后顺序， 如果imu的tail时间戳都小于雷达的时间戳，则无法插值 不符合直接continue
     if (tail->header.stamp.toSec() < last_lidar_end_time_)
       continue;
 

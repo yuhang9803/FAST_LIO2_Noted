@@ -108,8 +108,8 @@ namespace esekfom
 		typedef esekf self;
 		enum
 		{
-			n = state::DOF,		 //状态量自由度，一般代表x的维度
-			m = state::DIM,		 //状态量自由度，一般代表res的维度
+			n = state::DOF,		 //状态量自由度，一般代表x状态量的维度
+			m = state::DIM,		 //状态量自由度，一般代表res残差的维度
 			l = measurement::DOF //测量噪声维度
 		};
 
@@ -276,10 +276,10 @@ namespace esekfom
 			x_.build_vect_state();
 		}
 
-		// 迭代误差状态EKF传播
+		// 迭代误差状态EKF前向传播
 		void predict(double &dt, processnoisecovariance &Q, const input &i_in) //这里的参数均从use-ikfom中传入
 		{
-			// f函数对应use-ikfom.hpp中的 get_f函数，对应fast_lio2论文公式(2)
+			// f函数对应use-ikfom.hpp中的 get_f函数，对应fast_lio2论文公式(2)，更新状态
 			flatted_state f_ = f(x_, i_in); // m*1
 			// 对应use-ikfom.hpp中的 df_dx函数
 			// 对应fast_lio2论文公式(7)
