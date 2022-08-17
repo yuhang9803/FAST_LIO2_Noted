@@ -422,7 +422,7 @@ bool sync_packages(MeasureGroup &meas)
     //如果还没有把雷达数据放到meas中的话，就执行一下操作
     if (!lidar_pushed)
     {
-        // 从激光雷达点云缓存队列中取出点云数据，放到meas中
+        // 从激光雷达点云缓存队列中取出需要处理的点云数据（front端），放到meas中
         meas.lidar = lidar_buffer.front();
         // 如果该lidar没有点云，则返回false
         if (meas.lidar->points.size() <= 1)
@@ -447,7 +447,7 @@ bool sync_packages(MeasureGroup &meas)
     double imu_time = imu_buffer.front()->header.stamp.toSec();
     meas.imu.clear();
     // 拿出lidar_beg_time到lidar_end_time之间的所有IMU数据
-    while ((!imu_buffer.empty()) && (imu_time < lidar_end_time)) //如果imu缓存队列中的数据时间戳小于雷达结束时间戳，则将该数据放到meas中,代表了这一帧中的imu数据
+    while ((!imu_buffer.empty()) && (imu_time < lidar_end_time)) //如果imu缓存队列中的数据时间戳小于雷达结束时间戳，则将该数据放到meas中,代表了这两帧帧激光之间的imu数据
     {
         imu_time = imu_buffer.front()->header.stamp.toSec(); //获取imu数据的时间戳
         if (imu_time > lidar_end_time)
@@ -770,7 +770,7 @@ void h_share_model(state_ikfom &s, esekfom::dyn_share_datastruct<double> &ekfom_
 
     // 测量雅可比矩阵H和测量向量的计算 H=J*P*J'
     ekfom_data.h_x = MatrixXd::Zero(effct_feat_num, 12); //测量雅可比矩阵H，论文中的23
-    ekfom_data.h.resize(effct_feat_num);                 //测量向量h
+    ekfom_data.h.resize(effct_feat_num);                 //测量向量h,保存的为点到面的距离
 
     //求观测值与误差的雅克比矩阵，如论文式14以及式12、13
     for (int i = 0; i < effct_feat_num; i++)
@@ -800,7 +800,7 @@ void h_share_model(state_ikfom &s, esekfom::dyn_share_datastruct<double> &ekfom_
         ekfom_data.h_x.block<1, 12>(i, 0) << norm_p.x, norm_p.y, norm_p.z, VEC_FROM_ARRAY(A), VEC_FROM_ARRAY(B), VEC_FROM_ARRAY(C);
 
         // 测量:到最近表面/角落的距离
-        ekfom_data.h(i) = -norm_p.intensity; //点到面的距离
+        ekfom_data.h(i) = -norm_p.intensity; //点到面的距离，注意前面加了负号，所以在后续方程中不需要前面加上负号
     }
     solve_time += omp_get_wtime() - solve_start_; //返回从solve开始时候所经过的时间
 }
@@ -1052,6 +1052,7 @@ int main(int argc, char **argv)
             kf.update_iterated_dyn_share_modified(LASER_POINT_COV, solve_H_time);
             state_point = kf.get_x();
             euler_cur = SO3ToEuler(state_point.rot);
+            //Lidar全局的位置
             pos_lid = state_point.pos + state_point.rot * state_point.offset_T_L_I;
             geoQuat.x = state_point.rot.coeffs()[0];
             geoQuat.y = state_point.rot.coeffs()[1];

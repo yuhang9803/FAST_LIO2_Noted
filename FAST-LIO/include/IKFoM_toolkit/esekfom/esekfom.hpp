@@ -403,6 +403,7 @@ namespace esekfom
 			spMt xp = f_x_1 + f_x2 * dt;
 			P_ = xp * P_ * xp.transpose() + (f_w1 * dt) * Q * (f_w1 * dt).transpose();
 #else
+			//协防差传递方程，对应于FAST-LIO2 里的公式（6）
 			F_x1 += f_x_final * dt;
 			P_ = (F_x1)*P_ * (F_x1).transpose() + (dt * f_w_final) * Q * (dt * f_w_final).transpose();
 #endif
@@ -1804,9 +1805,9 @@ namespace esekfom
 				Eigen::Matrix<scalar_type, Eigen::Dynamic, 12> h_x_ = dyn_share.h_x;
 #endif
 				double solve_start = omp_get_wtime();
-				dof_Measurement = h_x_.rows(); // 观测方程个数m
+				dof_Measurement = h_x_.rows(); // 观测方程个数m，也即目前观测点的个数
 				vectorized_state dx;		   // 定义误差状态
-				x_.boxminus(dx, x_propagated); //获取误差dx
+				x_.boxminus(dx, x_propagated); //获取这一次迭代的误差状态dx
 				dx_new = dx;				   // 用于迭代的误差状态
 
 				if (!dyn_share.valid)
@@ -1821,8 +1822,8 @@ namespace esekfom
 				MTK::vect<3, scalar_type> seg_SO3;
 				for (std::vector<std::pair<int, int>>::iterator it = x_.SO3_state.begin(); it != x_.SO3_state.end(); it++)
 				{
-					int idx = (*it).first;
-					int dim = (*it).second;
+					int idx = (*it).first; //状态变量索引
+					int dim = (*it).second; //状态变量维数
 					for (int i = 0; i < 3; i++)
 					{
 						seg_SO3(i) = dx(idx + i);
@@ -1884,34 +1885,13 @@ namespace esekfom
 				// 如果状态量维度大于观测方程 n > m，不满秩
 				if (n > dof_Measurement)
 				{
-					//#ifdef USE_sparse
-					// Matrix<scalar_type, Eigen::Dynamic, Eigen::Dynamic> K_temp = h_x * P_ * h_x.transpose();
-					// spMt R_temp = h_v * R_ * h_v.transpose();
-					// K_temp += R_temp;
 					Eigen::Matrix<scalar_type, Eigen::Dynamic, Eigen::Dynamic> h_x_cur = Eigen::Matrix<scalar_type, Eigen::Dynamic, Eigen::Dynamic>::Zero(dof_Measurement, n);
 					//每一次迭代将重新计算增益K，即论文式18
 					h_x_cur.topLeftCorner(dof_Measurement, 12) = h_x_;
-					/*
-					h_x_cur.col(0) = h_x_.col(0);
-					h_x_cur.col(1) = h_x_.col(1);
-					h_x_cur.col(2) = h_x_.col(2);
-					h_x_cur.col(3) = h_x_.col(3);
-					h_x_cur.col(4) = h_x_.col(4);
-					h_x_cur.col(5) = h_x_.col(5);
-					h_x_cur.col(6) = h_x_.col(6);
-					h_x_cur.col(7) = h_x_.col(7);
-					h_x_cur.col(8) = h_x_.col(8);
-					h_x_cur.col(9) = h_x_.col(9);
-					h_x_cur.col(10) = h_x_.col(10);
-					h_x_cur.col(11) = h_x_.col(11);
-					*/
-					// 重新计算增益矩阵K
+					// 重新计算增益矩阵K，对应于FAST-LIO v1 里的（18） K的计算，为了计算更快一些，所以右乘了一个R^-1
 					Matrix<scalar_type, Eigen::Dynamic, Eigen::Dynamic> K_ = P_ * h_x_cur.transpose() * (h_x_cur * P_ * h_x_cur.transpose() / R + Eigen::Matrix<double, Dynamic, Dynamic>::Identity(dof_Measurement, dof_Measurement)).inverse() / R;
-					K_h = K_ * dyn_share.h;
-					K_x = K_ * h_x_cur;
-					//#else
-					//	K_= P_ * h_x.transpose() * (h_x * P_ * h_x.transpose() + h_v * R * h_v.transpose()).inverse();
-					//#endif
+					K_h = K_ * dyn_share.h; //对应FAST-LIO v1里的（18）的K*z
+					K_x = K_ * h_x_cur; //对应FAST-LIO v1里的（18）的K*H
 				}
 				else
 				{
@@ -1951,26 +1931,11 @@ namespace esekfom
 					K_ = P_temp.inverse() * h_x.transpose() * R_in;
 					*/
 #else
+					//以下操作都对应FAST-LIO v1 里的（20）
 					cov P_temp = (P_ / R).inverse();
 					// Eigen::Matrix<scalar_type, 12, Eigen::Dynamic> h_T = h_x_.transpose();
 					Eigen::Matrix<scalar_type, 12, 12> HTH = h_x_.transpose() * h_x_;
 					P_temp.template block<12, 12>(0, 0) += HTH;
-					/*
-					Eigen::Matrix<scalar_type, Eigen::Dynamic, Eigen::Dynamic> h_x_cur = Eigen::Matrix<scalar_type, Eigen::Dynamic, Eigen::Dynamic>::Zero(dof_Measurement, n);
-					//std::cout << "line 1767" << std::endl;
-					h_x_cur.col(0) = h_x_.col(0);
-					h_x_cur.col(1) = h_x_.col(1);
-					h_x_cur.col(2) = h_x_.col(2);
-					h_x_cur.col(3) = h_x_.col(3);
-					h_x_cur.col(4) = h_x_.col(4);
-					h_x_cur.col(5) = h_x_.col(5);
-					h_x_cur.col(6) = h_x_.col(6);
-					h_x_cur.col(7) = h_x_.col(7);
-					h_x_cur.col(8) = h_x_.col(8);
-					h_x_cur.col(9) = h_x_.col(9);
-					h_x_cur.col(10) = h_x_.col(10);
-					h_x_cur.col(11) = h_x_.col(11);
-					*/
 					cov P_inv = P_temp.inverse();
 					// std::cout << "line 1781" << std::endl;
 					K_h = P_inv.template block<n, 12>(0, 0) * h_x_.transpose() * dyn_share.h; // (H_T_H + P^-1)^-1 * H^T * h(残差) = K * h
@@ -1981,7 +1946,6 @@ namespace esekfom
 
 					K_x.template block<n, 12>(0, 0) = P_inv.template block<n, 12>(0, 0) * HTH; //(H_T_H + P^-1)^-1 * H_T_H = KH
 
-					// K_= (h_x_.transpose() * h_x_ + (P_/R).inverse()).inverse()*h_x_.transpose();
 #endif
 				}
 

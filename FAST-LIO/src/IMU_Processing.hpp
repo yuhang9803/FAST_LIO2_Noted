@@ -233,7 +233,7 @@ void ImuProcess::UndistortPcl(const MeasureGroup &meas, esekfom::esekf<state_ikf
   const double &pcl_beg_time = meas.lidar_beg_time;                 // 激光雷达pcl开始的时间戳
 
   /*** sort point clouds by offset time ***/
-  // 根据点云中每个点的时间戳对点云进行从小到大重排序
+  // 根据点云中每个点的时间戳对点云进行从小到大重排序，后续会从后往前矫每个点的畸变
   pcl_out = *(meas.lidar);
   sort(pcl_out.points.begin(), pcl_out.points.end(), time_list);
   const double &pcl_end_time = pcl_beg_time + pcl_out.points.back().curvature / double(1000); //拿到最后一帧时间戳加上最后一帧的所需要的时间/1000得到点云的结束时间戳
@@ -368,6 +368,7 @@ void ImuProcess::UndistortPcl(const MeasureGroup &meas, esekfom::esekf<state_ikf
       // 世界坐标系也无所谓时刻了 因为只有一个世界坐标系 两边变为
       // W^P = R_i * I^P+ W^t_I
       // W^P = W^P
+      //对应于FAST-LIO v1.0的（10）
       V3D P_compensate = imu_state.offset_R_L_I.conjugate() * (imu_state.rot.conjugate() * (R_i * (imu_state.offset_R_L_I * P_i + imu_state.offset_T_L_I) + T_ei) - imu_state.offset_T_L_I); // not accurate!
 
       // save Undistorted points and their rotation
